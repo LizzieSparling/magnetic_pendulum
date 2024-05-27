@@ -7,7 +7,7 @@ R = 0.6  # Square radius
 magnets = [(R, R), (-R, R), (-R, -R), (R, -R)]
 
 b = 0.05  # Damping coefficient
-h = 0.5  # Height above the plane of magnets
+h = 0.5  # Height above the x-y plane
 
 initial_pos = [0.95, -0.6]  # Random fixed initial position
 initial_vel = (0, 0)  # Initial velocity
