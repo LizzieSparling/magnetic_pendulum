@@ -1,6 +1,6 @@
-from pendulum import MagneticPendulum
-from simulation import run_simulation
-from plot import plot_trajectory
+from pendulumRK import MagneticPendulum
+from simulationRK import run_simulation
+from plotRK import plot_trajectory
 import numpy as np
 
 # Define the magnets in a square centered at the origin
@@ -18,6 +18,8 @@ print(f"Initial position: {initial_pos}")
 pendulum = MagneticPendulum(magnets, b, h, initial_pos, initial_vel)
 
 dt = 0.01  # Time step
+
 trajectory = run_simulation(pendulum, dt)
 
 plot_trajectory(trajectory, magnets)
+
