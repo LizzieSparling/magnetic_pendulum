@@ -15,7 +15,7 @@ m = 10  # Mass of pendulum bob
 
 # Initial conditions
 theta0 = np.pi / 3
-phi0 = np.pi / 3 
+phi0 = np.pi / 3
 theta_dot0 = 0.0  # Initially stationary
 phi_dot0 = 0.0  # Initially stationary
 initial_conditions = [theta0, phi0, theta_dot0, phi_dot0]
