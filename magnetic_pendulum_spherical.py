@@ -14,8 +14,8 @@ m = 10  # Mass of pendulum bob
 
 
 # Initial conditions
-theta0 = np.pi / 3  # 45 degrees
-phi0 = np.pi / 3  # 45 degrees
+theta0 = np.pi / 3
+phi0 = np.pi / 3 
 theta_dot0 = 0.0  # Initially stationary
 phi_dot0 = 0.0  # Initially stationary
 initial_conditions = [theta0, phi0, theta_dot0, phi_dot0]
@@ -51,17 +51,17 @@ def dVmag_dtheta(theta, phi, x_p, y_p, z_p):
     # Partial derivative of Vmag with respect to theta 
     return sum([dVmag_dtheta_magnet(theta, phi, x_p, y_p, z_p, mag_pos) for mag_pos in magnet_positions])
 
-def eval_dV_dphi_magnet(theta, phi, x_p, y_p, z_p, magnet_pos):
+def dVmag_dphi_magnet(theta, phi, x_p, y_p, z_p, magnet_pos):
     r_i = magnet_dist(x_p, y_p, z_p, magnet_pos)
     x_m, y_m, z_m = magnet_pos
-    d_r_i_d_phi = (-L * np.sin(theta) * np.sin(phi) * (x_p - x_m)
+    dri_d_phi = (-L * np.sin(theta) * np.sin(phi) * (x_p - x_m)
                     + L * np.sin(theta) * np.cos(phi) * (y_p - y_m)) / r_i
-    dV_dphi_magnet = 4 * k * d_r_i_d_phi / r_i**5
+    dV_dphi_magnet = 4 * k * dri_d_phi / r_i**5
     return dV_dphi_magnet
 
 def dVmag_dphi(theta, phi, x_p, y_p, z_p):
     # Partial derivative of Vmag with respect to phi
-    return sum([eval_dV_dphi_magnet(theta, phi, x_p, y_p, z_p, mag_pos) for mag_pos in magnet_positions])
+    return sum([dVmag_dphi_magnet(theta, phi, x_p, y_p, z_p, mag_pos) for mag_pos in magnet_positions])
 
 
 def derivatives(t, y):
@@ -86,7 +86,7 @@ def derivatives(t, y):
     return [theta_dot, phi_dot, theta_double_dot, phi_double_dot]
 
 
-# Numerical solution
+# Numerical solution, Runge Kutta method
 solution = solve_ivp(derivatives, [0, t_max], initial_conditions, t_eval=t_vals, method='RK45')
 theta = solution.y[0]
 phi = solution.y[1]
@@ -101,8 +101,8 @@ z = -L * np.cos(theta)
 # Plotting the trajectory
 ax = plt.figure(figsize=(8, 8)).add_subplot(projection='3d')
 ax.plot(x, y, z, label='Trajectory')
-ax.scatter(x[-1], y[-1], z[-1], color='orange', s=10, label='Final Position', zorder=5)
-ax.scatter(x[0], y[0], z[0], color='cyan', s=10, label='Initial Position', zorder=5)
+ax.scatter(x[-1], y[-1], z[-1], color='cyan', s=10, label='Final Position', zorder=5)
+ax.scatter(x[0], y[0], z[0], color='orange', s=10, label='Initial Position', zorder=5)
 
 
 
