@@ -22,4 +22,3 @@ dt = 0.01  # Time step
 trajectory = run_simulation(pendulum, dt)
 
 plot_trajectory(trajectory, magnets)
-
