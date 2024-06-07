@@ -1,4 +1,5 @@
 from functools import cached_property, partial
+from operator import itemgetter
 
 from .coordinate_systems import CurvilinearCoordinateSystem
 import sympy as sp
@@ -61,7 +62,11 @@ class Energy:
     
 
 class Model:
-    def __init__(self, coordsystem: CurvilinearCoordinateSystem, constants: List[sp.Symbol], name = "") -> None:
+    def __init__(self, coordsystem: CurvilinearCoordinateSystem,
+                 constants_list: List[sp.Symbol]=[],
+                 force_dict: Dict[str, Force]={},
+                 energy_dict: Dict[str, Energy]={},
+                 name = "") -> None:
         """
         constants: dictionary of sympy symbol to either a fixed value or None (representing no value)
                     not completely sure how to use this yet..
@@ -73,28 +78,67 @@ class Model:
         # for const_symbol in constants:
         #     setattr(self, f'c_{const_symbol.name}', const_symbol)
         # self.constants = list(constants)
-        self.constants = []
-        for c in constants:
-            self._add_const(c)
+        self.constants = {}
+        self._add_consts(constants_list)
 
         self.name = name
         self.objs = []
 
+        self.force_dict = {}
+        self.energy_dict = {}
+        self.add_forces(**force_dict)
+        self.add_energies(**energy_dict)
+
     def _add_obj(self, object):
         self.objs.append(object)
+
+    def __add_const(self, c: sp.Symbol):
+        if self.constants.get(c.name):
+            logger.warning('attempting to overwrite %s as constant in model.', c.name)
+        self.constants[c.name] = c
     
-    def _add_const(self, c: sp.Symbol):
-        if c in self.constants:
-            logger.info('%s already exists as constant in model.', c.name)
-        setattr(self, f'c_{c.name}', c)
-        self.constants.append(c)
+    def _add_consts(self, constants_list):
+        for c in constants_list:
+            self.__add_const(c)
+
+
+    def _add_energy(self, energy: Union[sp.Expr, Energy], name: str):
+        if not isinstance(energy, Energy):
+            energy = self.Energy(energy)
+        
+        if name in self.energy_dict:
+            logger.warning(
+                '%s already exists as energy in %s. overwriting.',
+                name, self.name)
+        # setattr(self, f'e_{name}', energy)
+        self.energy_dict[name] = energy
+
+    def _add_force(self, force: Union[np.ndarray[sp.Expr], Force], name: str):
+        if not isinstance(force, Force):
+            force = self.Force(force)
+        
+        if name in self.force_dict:
+            logger.warning(
+                '%s already exists as force in %s. overwriting.',
+                name, self.name)
+        # setattr(self, f'f_{name}', force)
+        self.force_dict[name] = force
+
+    def add_forces(self, **force_dict):
+        for name, force in force_dict.items():
+            self._add_force(force, name)
+    
+    def add_energies(self, **energy_dict):
+        for name, energy in energy_dict.items():
+            self._add_energy(energy, name)
 
 
 class Model_Object:
     def __init__(self, Model: Model, mass: Union[sp.Symbol, Real],
-                 position_symbols: np.ndarray[sp.Symbol],
-                 force_dict: Dict[str, Force]={},
-                 energy_dict: Dict[str, Energy]={},
+                 position_overwrite: List[Union[sp.Symbol, None]]=[None, None, None],
+                 forces_include: List[str] = None,
+                 energy_include: List[str] = None,
+                 constant_subs: Dict[str, Real] = {},
                  name = "",
                  
         ) -> None:
@@ -102,55 +146,42 @@ class Model_Object:
         self.Model._add_obj(self)
         self.name = name
         self.mass = mass
-        if not position_symbols:
-            position_symbols = self.Model.coordsystem.U
-        self.position_symbols = np.array(position_symbols)
+        if not position_overwrite:
+            position_overwrite = self.Model.coordsystem.U
+        self.position_overwrite = np.array(position_overwrite)
 
-        self.force_dict = force_dict
-        self.energy_dict = energy_dict
-        
-    
-    def _add_energy(self, energy: Union[sp.Expr, Energy], name: str):
-        # energy = self.Model.Energy(scalar)
-        # force = energy.to_force()
-        # self.add_force(force, name)
+        self.forces_include = forces_include
+        self.energy_include = energy_include
 
-        if not isinstance(energy, Energy):
-            energy = self.Model.Energy(energy)
-        
-        if name in self.energy_dict:
-            logger.warning(
-                '%s already exists as an energy for %s in %s. overwriting.',
-                name, self.name, self.Model.name)
-        # setattr(self, f'e_{name}', energy)
-        self.energy_dict[name] = energy
+        self.constant_subs = constant_subs
 
-    def _add_force(self, force: Union[np.ndarray[sp.Expr], Force], name: str):
-        if not isinstance(force, Force):
-            force = self.Model.Force(force)
-        
-        if name in self.force_dict:
-            logger.warning(
-                '%s already exists as force for %s in %s. overwriting.',
-                name, self.name, self.Model.name)
-        # setattr(self, f'f_{name}', force)
-        self.force_dict[name] = force
+        coordsys = self.Model.coordsystem
+        self.position = [new_u if new_u else u for (u, new_u) in zip(coordsys.U, self.position_overwrite)]
+        self.velocity = [sp.Derivative(pos, coordsys.t) for pos in self.position]
 
-    def add_forces(self, **forces_dict):
-        for name, force in forces_dict.items():
-            self._add_force(force, name)
-    
-    def add_energies(self, **energies_dict):
-        for name, energy in energies_dict.items():
-            self._add_energy(energy, name)
 
     def overall_force(self) -> Force:
         """includes energies also"""
-        total_base_forces = sum((f for f in self.force_dict.values()),
+
+        if self.forces_include is None:
+            forces = self.Model.force_dict.values()
+        elif self.forces_include:
+            forces = itemgetter(self.forces_include)(self.Model.force_dict)
+        else:
+            forces = []
+        #### these NEEED to be combined - this is so ugly
+        if self.energy_include is None:
+            energies = self.Model.energy_dict.values()
+        elif self.energy_include:
+            energies = itemgetter(self.energy_include)(self.Model.energy_dict)
+        else:
+            energies = []
+
+        total_base_forces = sum((f for f in forces),
                                 start=self.Model.Force(np.array([0,0,0]))
                             )
         # total_force_from_energy = sum(e for e in self.energy_dict.values()).to_force()
-        total_energy = sum((e for e in self.energy_dict.values()),
+        total_energy = sum((e for e in energies),
                                 start=self.Model.Energy(0)
                             )
         total_force_from_energy = total_energy.to_force()
@@ -158,12 +189,22 @@ class Model_Object:
         return total_base_forces + total_force_from_energy
     
     @cached_property
-    def position_substitutions(self):
-        position_replacement = list(zip(self.Model.coordsystem.U, self.position_symbols))
-        velocity_replacement = [(sp.Derivative(pos_u, self.Model.coordsystem.t),
-                                sp.diff(pos_u, self.Model.coordsystem.t))
-                                for pos_u in self.position_symbols]
-        return position_replacement + velocity_replacement
+    def position_func_substitutions(self):
+        # subs = []
+        # for u, new_u in zip(self.Model.coordsystem.U, self.position_overwrite):
+        #     if new_u:
+        #         # sub in new position
+        #         subs.append((u, new_u))
+        #         # sub in new velocity
+        #         new_u_diff = sp.Derivative(new_u, self.Model.coordsystem.t)
+        #         subs.append((new_u_diff, new_u_diff.doit()))
+
+        # return subs
+        t = self.Model.coordsystem.t
+        position_subs = list(zip(self.Model.coordsystem.U, self.position))
+        velocity_subs = [(v, v.doit()) for v in self.velocity]
+        return position_subs + velocity_subs
+
 
     def acceleration_equations(self) -> List[sp.Expr]:
         placeholder_force_over_mass = np.array(sp.symbols('F_1 F_2 F_3'))
@@ -172,7 +213,7 @@ class Model_Object:
             placeholder_force_over_mass
         )
 
-        subs = self.position_substitutions
+        subs = self.position_func_substitutions
     
         accelerations = [None, None, None]
         for i, (e, f, placeholder) in enumerate(zip(
@@ -185,14 +226,43 @@ class Model_Object:
             acceleration_in_direction = acceleration_in_direction.subs(placeholder, overall_force_over_mass)
 
             free_vars = (set(acceleration_in_direction.free_symbols)
-                         - set(self.Model.constants)
+                         - set(self.Model.constants.values())
                          - {self.Model.coordsystem.t}
                         )
             if free_vars:
                 logger.warning(f'found free variables in acceleration wrt {self.Model.coordsystem.U[i]}:'\
                                f'{free_vars}. assuming acceleration in this direction is 0')
-                acceleration_in_direction = sp.Expr(0)
+                acceleration_in_direction = sp.S.Zero
 
             accelerations[i] = acceleration_in_direction
 
         return accelerations
+
+    def check_const_substitutions(self, subs):
+        consts = set(self.Model.constants)
+
+        left_over = set(subs) - consts
+        missing = consts - set(subs)
+        if left_over:
+            logger.info(f'constants specified but unused: {left_over}')
+        if missing:
+            logger.warning(f'some constants still unspecified: {missing}')
+
+    def get_acceleration_with_subs(self, **value_subs):
+        # coordsys = self.Model.coordsystem
+
+        overlap = set(value_subs).intersection(set(self.constant_subs))
+        if overlap:
+            logger.warning(f'overwriting already defined constant values: {overlap}')
+            print(self.constant_subs)
+        value_subs = self.constant_subs | value_subs
+        
+        self.check_const_substitutions(value_subs)
+
+        fs = []
+        for e in self.acceleration_equations():
+            expr = e.subs(value_subs.items())
+            inputs = self.position + self.velocity
+            fs.append(sp.lambdify(inputs, expr, 'numpy', dummify=True))
+
+        return fs

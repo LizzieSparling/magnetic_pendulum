@@ -84,17 +84,22 @@ class CurvilinearCoordinateSystem:
         return np.vectorize(rearrange_acceleration_scalar)(self.acceleration_vector, RHS, self.U)
 
     def get_distance(self, to_v, from_v=None):
+        """MUST BOTH be in same coord system"""
+        to_pos = self.position_vector.subs(zip(self.U, to_v))
+        return self.get_distance_to_cartesian(to_pos, from_v)
+    
+    def get_distance_to_cartesian(self, to_pos: VectorAdd, from_v=None):
+        """from_v in current coord system, to_pos in cartesian"""
         if from_v:
             from_pos = self.position_vector.subs(zip(self.U, from_v))
         else:
             from_pos = self.position_vector
-        to_pos = self.position_vector.subs(zip(self.U, to_v))
         return sp.simplify((to_pos - from_pos).magnitude())
 
 
 
 def _get_cartesian_system() -> CurvilinearCoordinateSystem:
-    symbols = (x, y, z) = sp.symbols('r θ φ')
+    symbols = (x, y, z) = sp.symbols('x y z')
     position_vector = (x, y, z)
 
     return CurvilinearCoordinateSystem(
@@ -104,7 +109,7 @@ def _get_cartesian_system() -> CurvilinearCoordinateSystem:
     )
 
 def _get_cylindrical_system() -> CurvilinearCoordinateSystem:
-    symbols = (r, θ, z) = sp.symbols('r θ φ')
+    symbols = (r, θ, z) = sp.symbols('r θ z')
     position_vector = ((r*cos(θ)), (r*sin(θ)), (z))
 
     return CurvilinearCoordinateSystem(
