@@ -43,7 +43,7 @@ class CurvilinearCoordinateSystem:
 
     @cached_property
     def lame_coefficients(self) -> List[sp.Expr]:
-        magnitude = lambda v: sp.simplify(sp.sqrt(v & v))
+        magnitude = lambda v: sp.simplify(sp.sqrt(v.dot(v)))
         return np.vectorize(magnitude)(self._direction_vectors)
 
     @cached_property
