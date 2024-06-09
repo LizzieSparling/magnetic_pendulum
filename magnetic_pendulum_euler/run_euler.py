@@ -10,7 +10,7 @@ magnets = [(R, R), (-R, R), (-R, -R), (R, -R)]
 b = 0.05  # Damping coefficient
 h = 0.5  # Height above the x-y plane
 
-initial_pos = [0.6, 1.0]  # Random fixed initial position
+initial_pos = [-0.8, 0.9]  # Random fixed initial position
 initial_vel = (0, 0)  # Initial velocity
 print(f"Initial position: {initial_pos}")
 

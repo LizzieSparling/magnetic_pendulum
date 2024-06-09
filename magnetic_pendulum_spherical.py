@@ -22,7 +22,7 @@ initial_conditions = [theta0, phi0, theta_dot0, phi_dot0]
 
 
 dt = 0.01  # Time step
-t_max = 100  # Maximum time
+t_max = 10000  # Maximum time
 t_vals = np.arange(0, t_max, dt)
 
 
@@ -122,4 +122,26 @@ ax.set_zlabel('Z')
 ax.legend()
 plt.show()
 
-print()
+
+#POINCARE MAP CONSTRUCTION
+p_section = 0
+crossings = []
+
+for i in range(len(t_vals)-1):
+    if x[i] < p_section < x[i+1] or x[i] > p_section > x[i + 1]:
+        y_val = y[i] + (y[i + 1] - y[i]) * (p_section - x[i]) / (x[i + 1] - x[i])
+        theta_dot_val = solution.y[2, i] + (solution.y[2, i + 1] - solution.y[2, i]) * (p_section - x[i]) / (x[i + 1] - x[i])
+        crossings.append([y_val, theta_dot_val]) 
+
+crossings = np.array(crossings)
+
+if crossings.size > 0:
+    plt.figure(figsize=(8, 6))
+    plt.scatter(crossings[:, 0], crossings[:, 1], s=1)
+    plt.title("Poincaré Map of the Magnetic Pendulum")
+    plt.xlabel("Y")
+    plt.ylabel("dTheta/dt")
+    plt.grid(True)
+    plt.show()
+else:
+    print("No crossings detected for the Poincaré map.")

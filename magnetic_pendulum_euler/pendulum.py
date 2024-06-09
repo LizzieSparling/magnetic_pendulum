@@ -7,7 +7,7 @@ class MagneticPendulum:
         self.h = h  # Distance of bob above x-y plane
         self.pos = np.array(initial_pos, dtype=float)  # Initial position (x, y)
         self.vel = np.array(initial_vel, dtype=float)  # Initial velocity (dx, dy)
-        self.strength = 5
+        self.m = 5  # Magnet strength constant
 
 
     def _distance(self, magnet_pos):
@@ -17,7 +17,7 @@ class MagneticPendulum:
     def _magnetic_force(self, magnet_pos):
         """Magnetic force vector : second derived equation."""
         dist = self._distance(magnet_pos)
-        return self.strength * (magnet_pos - self.pos) * (1 / dist**5)
+        return self.m * (magnet_pos - self.pos) * (1 / dist**5)
 
     def _gravitational_force(self):
         """Gravitational force on bob."""
