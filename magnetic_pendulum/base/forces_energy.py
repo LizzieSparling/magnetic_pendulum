@@ -146,17 +146,17 @@ class Model_Object:
         self.Model._add_obj(self)
         self.name = name
         self.mass = mass
-        if not position_overwrite:
-            position_overwrite = self.Model.coordsystem.U
-        self.position_overwrite = np.array(position_overwrite)
 
         self.forces_include = forces_include
         self.energy_include = energy_include
 
         self.constant_subs = constant_subs
 
-        coordsys = self.Model.coordsystem
-        self.position = [new_u if new_u else u for (u, new_u) in zip(coordsys.U, self.position_overwrite)]
+        coordsys: CurvilinearCoordinateSystem = self.Model.coordsystem
+        
+        if not position_overwrite:
+            position_overwrite = [None]*len(coordsys.U)
+        self.position = [new_u if new_u else u for (u, new_u) in zip(coordsys.U, position_overwrite)]
         self.velocity = [sp.Derivative(pos, coordsys.t) for pos in self.position]
 
 
@@ -190,17 +190,6 @@ class Model_Object:
     
     @cached_property
     def position_func_substitutions(self):
-        # subs = []
-        # for u, new_u in zip(self.Model.coordsystem.U, self.position_overwrite):
-        #     if new_u:
-        #         # sub in new position
-        #         subs.append((u, new_u))
-        #         # sub in new velocity
-        #         new_u_diff = sp.Derivative(new_u, self.Model.coordsystem.t)
-        #         subs.append((new_u_diff, new_u_diff.doit()))
-
-        # return subs
-        t = self.Model.coordsystem.t
         position_subs = list(zip(self.Model.coordsystem.U, self.position))
         velocity_subs = [(v, v.doit()) for v in self.velocity]
         return position_subs + velocity_subs

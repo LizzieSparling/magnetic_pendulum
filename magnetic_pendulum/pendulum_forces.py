@@ -52,14 +52,15 @@ class Pendulum(Model):
         return self.Energy(m*(speed**2)/2)
 
     
-    def create_bob(self, position_overwrite, forces_include=None, energy_include=None):
+    def create_bob(self, position_overwrite, forces_include=None, energy_include=None, *args, **kwargs):
         m = itemgetter('m')(self.constants)
         
         bob = Model_Object(
             self, m, position_overwrite,
             forces_include=forces_include,
             energy_include=energy_include,
-            name=f'bob_{len(self.objs)}'
+            name=f'bob_{len(self.objs)}',
+            *args, **kwargs
         )
         self._add_obj(bob)
         return bob
@@ -83,9 +84,9 @@ class Pendulum(Model):
 
     
 
-    def get_path(self, starting_conditions, t_max=100, dt=0.001, **value_subs):
+    def get_path(self, starting_conditions, t_max=100, dt=0.001, bob=None, **value_subs):
         t_vals = np.arange(0, t_max, dt)
-        ddt = self._get_ddt(**value_subs)
+        ddt = self._get_ddt(bob, **value_subs)
         result = solve_ivp(ddt, (0, t_max), starting_conditions, t_eval=t_vals, method='RK45')
         return result.y
 
@@ -159,10 +160,10 @@ class MagneticPendulumInvSpherical(MagneticPendulum):
             *args, **kwargs
         )
 
-    def create_bob(self):
+    def create_bob(self, *args, **kwargs):
         L = itemgetter('L')(self.constants)
         pos = (L, None, None)
-        return super().create_bob(position_overwrite=pos)
+        return super().create_bob(position_overwrite=pos, *args, **kwargs)
 
     def _get_ddt(self, bob: Model_Object=None, **value_subs):
         """this implementation is so hideous but I'm too tired to think about it"""
@@ -197,10 +198,10 @@ class MagneticPendulumXY(MagneticPendulum):
         """we define gravity slightly different on the plane ..."""
         return (self.coordsystem.U[0]**2 + self.coordsystem.U[1]**2)/2
 
-    def create_bob(self):
+    def create_bob(self, *args, **kwargs):
         L = itemgetter('L')(self.constants)
         pos = (None, None, -L)
-        return super().create_bob(position_overwrite=pos)
+        return super().create_bob(position_overwrite=pos, *args, **kwargs)
     
     def _get_ddt(self, bob: Model_Object=None, **value_subs):
         """this implementation is so hideous but I'm too tired to think about it"""
