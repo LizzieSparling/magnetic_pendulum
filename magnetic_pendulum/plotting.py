@@ -3,7 +3,7 @@ import matplotlib.animation as animation
 
 def plot_trajectory(trajectory, magnet_positions, L):
     
-    ax = plt.figure(figsize=(8, 8)).add_subplot(projection='3d')
+    ax = plt.figure(figsize=(5, 5)).add_subplot(projection='3d')
     # plt.title(f'Magnetic Pendulum Trajectory')
     ax.set_title(f'Magnetic Pendulum Trajectory')
     # Plot the trajectory
@@ -29,6 +29,36 @@ def plot_trajectory(trajectory, magnet_positions, L):
     ax.set_zlabel('Z')
     # plt.show()
     return ax
+
+def plot_trajectory_2D(trajectory, magnet_positions, L):
+    trajectory = trajectory[:2]
+    magnet_positions = [m[:2] for m in magnet_positions]
+    
+    ax = plt.figure(figsize=(5, 5)).add_subplot()
+    # plt.title(f'Magnetic Pendulum Trajectory')
+    ax.set_title(f'Magnetic Pendulum Trajectory')
+    # Plot the trajectory
+    ax.plot(*trajectory, label='Pendulum Path', zorder=1)  
+
+    # Plot the magnet positions
+    ax.scatter(*zip(*magnet_positions), color='red', label='Magnets', zorder=2)  
+
+    # Plot the final & initial positions of the pendulum
+    final_position = trajectory[:,-1]
+    initial_position = trajectory[:,0]
+    ax.scatter(*final_position, color='cyan', label='Final Position', s=10, zorder=3)
+    ax.scatter(*initial_position, color='black', label='Initial Position', s=10, zorder=3)
+
+    ax.legend()
+    ax.grid(True)
+    ax.set_xlim(-L,L)
+    ax.set_ylim(-L,L)
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    # plt.show()
+    return ax
+
 
 def plot_trajectory_animation(trajectory, magnet_positions, L, dt=0.01, timestep=None):
 
